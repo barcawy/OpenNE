@@ -18,6 +18,8 @@ from .grarep import GraRep
 import time
 import ast
 
+from . import cll
+
 
 def parse_args():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
@@ -53,7 +55,8 @@ def parse_args():
         'hope',
         'lap',
         'gf',
-        'sdne'
+        'sdne',
+        'cll'
     ], help='The learning method')
     parser.add_argument('--label-file', default='',
                         help='The file of node label')
@@ -115,10 +118,16 @@ def main(args):
     elif args.graph_format == 'edgelist':
         g.read_edgelist(filename=args.input, weighted=args.weighted,
                         directed=args.directed)
+
     if args.method == 'node2vec':
         model = node2vec.Node2vec(graph=g, path_length=args.walk_length,
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, p=args.p, q=args.q, window=args.window_size)
+    elif args.method == 'cll':
+        model = cll.CLL(g, epoch=args.epochs, rep_size=args.representation_size, order=args.order,
+                              label_file=args.label_file, clf_ratio=args.clf_ratio)
+        print("done")
+        return
     elif args.method == 'line':
         if args.label_file and not args.no_auto_save:
             model = line.LINE(g, epoch=args.epochs, rep_size=args.representation_size, order=args.order,

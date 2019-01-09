@@ -17,11 +17,10 @@ class _LINE(object):
         self.rep_size = rep_size
         self.batch_size = batch_size
         self.negative_ratio = negative_ratio
-
-        self.gen_sampling_table()
+        self.gen_sampling_table() # negqtive sampling
         self.sess = tf.Session()
         cur_seed = random.getrandbits(32)
-        initializer = tf.contrib.layers.xavier_initializer(
+        initializer = tf.contrib.layers.xavier_initializer( # init weight
             uniform=False, seed=cur_seed)
         with tf.variable_scope("model", reuse=None, initializer=initializer):
             self.build_graph()
@@ -42,12 +41,9 @@ class _LINE(object):
         # self.t_e_context = tf.nn.l2_normalize(tf.nn.embedding_lookup(self.context_embeddings, self.t), 1)
         self.h_e = tf.nn.embedding_lookup(self.embeddings, self.h)
         self.t_e = tf.nn.embedding_lookup(self.embeddings, self.t)
-        self.t_e_context = tf.nn.embedding_lookup(
-            self.context_embeddings, self.t)
-        self.second_loss = -tf.reduce_mean(tf.log_sigmoid(
-            self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e_context), axis=1)))
-        self.first_loss = -tf.reduce_mean(tf.log_sigmoid(
-            self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e), axis=1)))
+        self.t_e_context = tf.nn.embedding_lookup(self.context_embeddings, self.t)
+        self.second_loss = -tf.reduce_mean(tf.log_sigmoid(self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e_context), axis=1)))
+        self.first_loss = -tf.reduce_mean(tf.log_sigmoid(self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e), axis=1)))
         if self.order == 1:
             self.loss = self.first_loss
         else:
