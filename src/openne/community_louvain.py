@@ -86,13 +86,14 @@ def partition_at_level(dendrogram, level):
     >>>     print("partition at level", level, "is", partition_at_level(dendrogram, level))  # NOQA
     """
     # add level_partion 2019/01/09
-    
+
     level_partition = []
     partition = dendrogram[0].copy()
     for index in range(1, level + 1):
         for node, community in partition.items():
             partition[node] = dendrogram[index][community]
         level_partition.append(partition)
+        print(index,level,len(set(partition.values())))
     return level_partition
 
 
