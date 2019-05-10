@@ -5,7 +5,7 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from sklearn.linear_model import LogisticRegression
 from .graph import *
 from . import node2vec
-from .classify import Classifier, read_node_label
+from .classify import Classifier, read_node_label, read_node_label_index
 from . import line
 from . import tadw
 from .gcn import gcnAPI
@@ -15,6 +15,7 @@ from . import lap
 from . import gf
 from . import sdne
 from .grarep import GraRep
+from . import Mayten
 import time
 import ast
 
@@ -56,7 +57,8 @@ def parse_args():
         'lap',
         'gf',
         'sdne',
-        'cll'
+        'cll',
+        'mayten'
     ], help='The learning method')
     parser.add_argument('--label-file', default='',
                         help='The file of node label')
@@ -139,6 +141,10 @@ def main(args):
         model = node2vec.Node2vec(graph=g, path_length=args.walk_length,
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
+    elif args.method == 'mayten':
+        model = Mayten.Mayten(graph=g, path_length=args.walk_length,
+                                  num_paths=args.number_walks, dim=args.representation_size,
+                                  workers=args.workers, window=args.window_size)
     elif args.method == 'tadw':
         # assert args.label_file != ''
         assert args.feature_file != ''
@@ -177,7 +183,8 @@ def main(args):
         model.save_embeddings(args.output)
     if args.label_file and args.method != 'gcn':
         vectors = model.vectors
-        X, Y = read_node_label(args.label_file)
+        X, Y = read_node_label(args.label_file)  # groupid list
+        # X, Y = read_node_label_index(args.label_file)  # 单列groupid
         print("Training classifier using {:.2f}% nodes...".format(
             args.clf_ratio*100))
         clf = Classifier(vectors=vectors, clf=LogisticRegression())

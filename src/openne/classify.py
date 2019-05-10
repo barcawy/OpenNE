@@ -83,7 +83,7 @@ def load_embeddings(filename):
     return vectors
 
 
-def read_node_label(filename):
+def read_node_label(filename):  # uid groupid (list)
     fin = open(filename, 'r')
     X = []
     Y = []
@@ -94,5 +94,25 @@ def read_node_label(filename):
         vec = l.strip().split(' ')
         X.append(vec[0])
         Y.append(vec[1:])
+    fin.close()
+    return X, Y
+
+
+def read_node_label_index(filename):  # uid groupid
+    fin = open(filename, 'r')
+    X = []
+    Y = []
+    index = -1
+    while 1:
+        l = fin.readline()
+        if l == '':
+            break
+        vec = l.strip.split(' ')
+        if(vec[0] != index):
+            X.append(vec[0])
+            Y.append(vec[1])
+            index = vec[0]
+        else:
+            Y[-1].append(vec[1])
     fin.close()
     return X, Y
