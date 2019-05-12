@@ -29,6 +29,10 @@ def parse_args():
                         help='Input graph file')
     parser.add_argument('--output',
                         help='Output representation file')
+    parser.add_argument('--result',
+                        help='results file')
+    parser.add_argument('--dataset',
+                        help='dataset name')
     parser.add_argument('--number-walks', default=10, type=int,
                         help='Number of random walks to start at each node')
     parser.add_argument('--directed', action='store_true',
@@ -188,7 +192,9 @@ def main(args):
         print("Training classifier using {:.2f}% nodes...".format(
             args.clf_ratio*100))
         clf = Classifier(vectors=vectors, clf=LogisticRegression())
-        clf.split_train_evaluate(X, Y, args.clf_ratio)
+        results = clf.split_train_evaluate(X, Y, args.clf_ratio)
+        model.save_results(args.result, args.method,args.clf_ratio, results)
+
 
 
 if __name__ == "__main__":

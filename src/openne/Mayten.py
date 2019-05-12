@@ -35,6 +35,13 @@ class Mayten(object):
                                         ' '.join([str(x) for x in vec])))
         fout.close()
 
+    def save_results(self, filename, method, ratio, result):
+        fout = open(filename, 'w')
+        node_num = len(self.vectors)
+        fout.write("{} {} {} \n".format(method, ratio, result))
+        fout.close()
+
+
 class Surfing(object):
     def __init__(self, G, workers):
         self.G = G.G
@@ -78,7 +85,7 @@ class Surfing(object):
         alpha = [0] * len(nodes)
         look_up_dict = self.look_up_dict
         for node in nodes:
-            alpha[look_up_dict[node]] = G.degree(node)
+            alpha[look_up_dict[node]] = G.out_degree(node)
         half = self.get_median(alpha)
         alpha = [a / (a + half) for a in alpha]
         print('Walk iteration:')

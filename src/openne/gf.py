@@ -72,3 +72,9 @@ class GraphFactorization(object):
         for node, vec in self.vectors.items():
             fout.write("{} {}\n".format(node, ' '.join([str(x) for x in vec])))
         fout.close()
+
+    def save_results(self, filename, method, ratio, result):
+        fout = open(filename, 'w')
+        node_num = len(self.vectors)
+        fout.write("{} {} {} \n".format(method, ratio, result))
+        fout.close()
