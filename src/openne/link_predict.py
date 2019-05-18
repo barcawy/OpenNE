@@ -1,7 +1,5 @@
 from __future__ import print_function
 import networkx as nx
-import matplotlib.pyplot as plt
-import pandas as pd
 import scipy.sparse as sp
 import numpy as np
 from sklearn.metrics import roc_auc_score
@@ -14,7 +12,6 @@ from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from sklearn.linear_model import LogisticRegression
 from .graph import *
 from . import node2vec
-from .classify import Classifier, read_node_label, read_node_label_index
 from . import line
 from . import tadw
 from .gcn import gcnAPI
@@ -35,6 +32,8 @@ def parse_args():
                             conflict_handler='resolve')
     parser.add_argument('--dataset-dir', required=True,
                         help='Input graph file')
+    parser.add_argument('--output',
+                        help='Output representation file')
     parser.add_argument('--number-walks', default=10, type=int,
                         help='Number of random walks to start at each node')
     parser.add_argument('--directed', action='store_true',
@@ -66,54 +65,28 @@ def parse_args():
         'cll',
         'mayten'
     ], help='The learning method')
+    parser.add_argument('--weighted', action='store_true',
+                        help='Treat graph as weighted')
 
     args = parser.parse_args()
     return args
 
 
-IS_DIRECTED = None
-
-
-def IsDirected(dataset_dir):
-  global IS_DIRECTED
-  if IS_DIRECTED is not None:
-    return IS_DIRECTED
-  IS_DIRECTED = os.path.exists(
-      os.path.join(dataset_dir, 'test.directed.neg.txt.npy'))
-  return IS_DIRECTED
-
-
-def GetNumNodes(dataset_dir):
-  global NUM_NODES
-  if NUM_NODES == 0:
-    index = pickle.load(
-        open(os.path.join(dataset_dir, 'index.pkl'), 'rb'))
-    NUM_NODES = len(index['index'])
-  return NUM_NODES
-
-
-def GetOrMakeAdjacencyMatrix(dataset_dir):
-  """Creates Adjacency matrix and caches it on disk with name a.npy."""
-  a_file = os.path.join(dataset_dir, 'a.npy')
-  if os.path.exists(a_file):
-    return np.load(open(a_file, 'rb'))
-
-  num_nodes = GetNumNodes()
-  a = np.zeros(shape=(num_nodes, num_nodes), dtype='float32')
-  train_edges = np.load(
-      open(os.path.join(dataset_dir, 'train.txt.npy'), 'rb'))
-  a[train_edges[:, 0], train_edges[:, 1]] = 1.0
-  if not IsDirected():
-    a[train_edges[:, 1], train_edges[:, 0]] = 1.0
-
-  np.save(open(a_file, 'wb'), a)
-  return a
+def get_edge_embeddings(emb_matrix, edge_list):
+    embs = []
+    for edge in edge_list:
+        emb1 = emb_matrix[str(edge[0])]
+        emb2 = emb_matrix[str(edge[1])]
+        edge_emb = np.multiply(emb1, emb2)
+        embs.append(edge_emb)
+    embs = np.array(embs)
+    return embs
 
 
 def main(args):
     t1 = time.time()
 
-    if IsDirected(args.dataset-dir):
+    if args.directed:
         test_neg_file = os.path.join(args.dataset_dir, 'test.directed.neg.txt.npy')
         test_neg_arr = np.load(open(test_neg_file, 'rb'))
     else:
@@ -128,7 +101,9 @@ def main(args):
     train_neg_arr = np.load(open(train_neg_file, 'rb'))
 
     g = Graph()
-    g.read_adjlist(filename=train_pos_file)
+    # g.read_npy(edgelist=train_pos_arr, directed=args.directed) word2vec ERROR
+    np.savetxt('data.txt', train_pos_arr, fmt='%d')
+    g.read_edgelist('data.txt', weighted=args.weighted, directed=args.directed)
 
     if args.method == 'node2vec':
         model = node2vec.Node2vec(graph=g, path_length=args.walk_length,
@@ -149,6 +124,32 @@ def main(args):
     print("Saving embeddings...")
     model.save_embeddings(args.output)
     vectors = model.vectors
+
+    # Train-set edge embeddings
+    pos_train_edge_embs = get_edge_embeddings(vectors, train_pos_arr)
+    neg_train_edge_embs = get_edge_embeddings(vectors, train_neg_arr)
+    train_edge_embs = np.concatenate([pos_train_edge_embs, neg_train_edge_embs])
+
+    # Create train-set edge labels: 1 = real edge, 0 = false edge
+    train_edge_labels = np.concatenate([np.ones(len(train_pos_arr)), np.zeros(len(train_neg_arr))])
+
+    # Test-set edge embeddings, labels
+    pos_test_edge_embs = get_edge_embeddings(vectors, test_pos_arr)
+    neg_test_edge_embs = get_edge_embeddings(vectors, test_neg_arr)
+    test_edge_embs = np.concatenate([pos_test_edge_embs, neg_test_edge_embs])
+
+    # Create val-set edge labels: 1 = real edge, 0 = false edge
+    test_edge_labels = np.concatenate([np.ones(len(test_pos_arr)), np.zeros(len(test_neg_arr))])
+
+    # Train logistic regression classifier on train-set edge embeddings
+    edge_classifier = LogisticRegression(random_state=0)
+    edge_classifier.fit(train_edge_embs, train_edge_labels)
+
+    # Predicted edge scores: probability of being of class "1" (real edge)
+    test_preds = edge_classifier.predict_proba(test_edge_embs)[:, 1]
+    test_roc = roc_auc_score(test_edge_labels, test_preds)
+    test_prec = average_precision_score(test_edge_labels, test_preds)
+    print('Method: %s, ROC: %f, Prec: %f' %(args.method, test_roc, test_prec))
 
 
 if __name__ == "__main__":

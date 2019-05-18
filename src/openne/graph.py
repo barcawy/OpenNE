@@ -79,6 +79,30 @@ class Graph(object):
         fin.close()
         self.encode_node()
 
+    def read_npy(self, edgelist, directed=False):
+        self.G = nx.DiGraph()
+
+        if directed:
+            def read_unweighted(edge):
+                src = edge[0]
+                dst = edge[1]
+                self.G.add_edge(src, dst)
+                self.G[src][dst]['weight'] = 1.0
+        else:
+            def read_unweighted(edge):
+                src = edge[0]
+                dst = edge[1]
+                self.G.add_edge(src, dst)
+                self.G.add_edge(dst, src)
+                self.G[src][dst]['weight'] = 1.0
+                self.G[dst][src]['weight'] = 1.0
+
+        for edge in edgelist:
+            read_unweighted(edge)
+
+        self.encode_node()
+
+
     def read_node_label(self, filename):
         fin = open(filename, 'r')
         while 1:
