@@ -138,7 +138,7 @@ def main(args):
     neg_test_edge_embs = get_edge_embeddings(vectors, test_neg_arr)
     test_edge_embs = np.concatenate([pos_test_edge_embs, neg_test_edge_embs])
 
-    # Create val-set edge labels: 1 = real edge, 0 = false edge
+    # Create test-set edge labels: 1 = real edge, 0 = false edge
     test_edge_labels = np.concatenate([np.ones(len(test_pos_arr)), np.zeros(len(test_neg_arr))])
 
     # Train logistic regression classifier on train-set edge embeddings
