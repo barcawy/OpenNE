@@ -77,7 +77,6 @@ class _LINE(object):
         edges = [(look_up[x[0]], look_up[x[1]]) for x in self.g.G.edges()]
 
         data_size = self.g.G.number_of_edges()
-        edge_set = set([x[0]*numNodes+x[1] for x in edges])
         shuffle_indices = np.random.permutation(np.arange(data_size))
 
         # positive or negative mod
@@ -196,53 +195,30 @@ class _LINE(object):
         return vectors
 
 
-class LINE(object):
+class Z(object):
 
     def __init__(self, graph, rep_size=128, batch_size=1000, epoch=10, negative_ratio=5, order=3, label_file=None, clf_ratio=0.5, auto_save=True):
         self.rep_size = rep_size
-        self.order = order
         self.best_result = 0
         self.vectors = {}
-        if order == 3:
-            self.model1 = _LINE(graph, rep_size/2, batch_size,
-                                negative_ratio, order=1)
-            self.model2 = _LINE(graph, rep_size/2, batch_size,
-                                negative_ratio, order=2)
-            for i in range(epoch):
-                self.model1.train_one_epoch()
-                self.model2.train_one_epoch()
-                if label_file:
-                    self.get_embeddings()
-                    X, Y = read_node_label(label_file)
-                    print("Training classifier using {:.2f}% nodes...".format(
-                        clf_ratio*100))
-                    clf = Classifier(vectors=self.vectors,
-                                     clf=LogisticRegression())
-                    result = clf.split_train_evaluate(X, Y, clf_ratio)
 
-                    if result['macro'] > self.best_result:
-                        self.best_result = result['macro']
-                        if auto_save:
-                            self.best_vector = self.vectors
+        self.model = _LINE(graph, rep_size, batch_size,
+                           negative_ratio, order=self.order)
+        for i in range(epoch):
+            self.model.train_one_epoch()
+            if label_file:
+                self.get_embeddings()
+                X, Y = read_node_label(label_file)
+                print("Training classifier using {:.2f}% nodes...".format(
+                    clf_ratio*100))
+                clf = Classifier(vectors=self.vectors,
+                                 clf=LogisticRegression())
+                result = clf.split_train_evaluate(X, Y, clf_ratio)
 
-        else:
-            self.model = _LINE(graph, rep_size, batch_size,
-                               negative_ratio, order=self.order)
-            for i in range(epoch):
-                self.model.train_one_epoch()
-                if label_file:
-                    self.get_embeddings()
-                    X, Y = read_node_label(label_file)
-                    print("Training classifier using {:.2f}% nodes...".format(
-                        clf_ratio*100))
-                    clf = Classifier(vectors=self.vectors,
-                                     clf=LogisticRegression())
-                    result = clf.split_train_evaluate(X, Y, clf_ratio)
-
-                    if result['macro'] > self.best_result:
-                        self.best_result = result['macro']
-                        if auto_save:
-                            self.best_vector = self.vectors
+                if result['macro'] > self.best_result:
+                    self.best_result = result['macro']
+                    if auto_save:
+                        self.best_vector = self.vectors
 
         self.get_embeddings()
         if auto_save and label_file:

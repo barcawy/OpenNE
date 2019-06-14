@@ -21,7 +21,7 @@ from . import lap
 from . import gf
 from . import sdne
 from .grarep import GraRep
-from . import Mayten
+from . import Z_mayten
 import time
 import ast
 
@@ -114,9 +114,9 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
-        model = Mayten.Mayten(graph=g, path_length=args.walk_length,
-                                  num_paths=args.number_walks, dim=args.representation_size,
-                                  workers=args.workers, window=args.window_size)
+        model = Z_mayten.Mayten(graph=g, path_length=args.walk_length,
+                                num_paths=args.number_walks, dim=args.representation_size,
+                                workers=args.workers, window=args.window_size)
 
     t2 = time.time()
     # print('time: %d \n' %(t2 - t1))
