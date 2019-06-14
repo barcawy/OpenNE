@@ -196,7 +196,7 @@ def main(args):
             args.clf_ratio*100))
         clf = Classifier(vectors=vectors, clf=LogisticRegression())
         results = clf.split_train_evaluate(X, Y, args.clf_ratio)
-        model.save_results(args.result, args.method, args.clf_ratio, results)
+        # model.save_results(args.result, args.method, args.clf_ratio, results)
 
 
 

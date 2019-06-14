@@ -59,7 +59,7 @@ class Surfing(object):
         walk = [start_node]
         cur = walk[-1]
         while len(walk) < walk_length:
-            if np.random.rand() < alpha[look_up_dict[cur]]:
+            if np.random.rand() < alpha[look_up_dict[start_node]]:
                 cur = walk[-1]
             else:
                 cur = walk[0]

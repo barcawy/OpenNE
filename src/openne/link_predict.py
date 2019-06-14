@@ -119,7 +119,7 @@ def main(args):
                                   workers=args.workers, window=args.window_size)
 
     t2 = time.time()
-    print('time: %d \n' %(t2 - t1))
+    # print('time: %d \n' %(t2 - t1))
 
     print("Saving embeddings...")
     model.save_embeddings(args.output)
@@ -149,7 +149,7 @@ def main(args):
     test_preds = edge_classifier.predict_proba(test_edge_embs)[:, 1]
     test_roc = roc_auc_score(test_edge_labels, test_preds)
     test_prec = average_precision_score(test_edge_labels, test_preds)
-    print('Method: %s, ROC: %f, Prec: %f' %(args.method, test_roc, test_prec))
+    print('Method: %s, ROC: %f, Prec: %f, time: %d' %(args.method, test_roc, test_prec, t2-t1))
 
 
 if __name__ == "__main__":
