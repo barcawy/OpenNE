@@ -190,7 +190,7 @@ def main(args):
         X, Y = read_node_label(args.label_file)  # groupid list
         # X, Y = read_node_label_index(args.label_file)  # 单列groupid
 
-        ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        # ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         # for ratio in ratios:
         print("Training classifier using {:.2f}% nodes...".format(
             args.clf_ratio*100))
