@@ -10,7 +10,9 @@ from .classify import Classifier, read_node_label, read_node_label_index
 def parse_args():
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
                             conflict_handler='resolve')
-    parser.add_argument('--emb-file', required=True,
+    parser.add_argument('--emb1', required=True,
+                        help='Input embedding file')
+    parser.add_argument('--emb2',
                         help='Input embedding file')
     parser.add_argument('--method', required=True, choices=[
         'l',
@@ -37,9 +39,34 @@ def load_embeddings(filename):
     assert len(vectors) == node_num
     return vectors
 
+def load_embeddings_d(f1, f2):
+    file1 = open(f1, 'r')
+    file2 = open(f2, 'r')
+    node_num, size = [int(x) for x in file1.readline().strip().split()]
+    vectors = {}
+    x=0
+    while 1:
+        x += 1
+        l1 = file1.readline()
+        l2 = file2.readline()
+        if l1 == '' or l2 == '':
+            break
+        vec1 = l1.strip().split(' ')
+        vec2 = l1.strip().split(' ')
+        print(x, node_num, len(vec1), len(vec2), size+1)
+        assert len(vec1) == size + 1
+        assert len(vec2) == size + 1
+        vectors[vec1[0]] = [float(x) for x in vec1[1:]] + [float(x) for x in vec2[1:]]
+    file1.close()
+    file2.close()
+    assert len(vectors) == node_num
+    return vectors
 
 def main(args):
-    vectors = load_embeddings(args.emb)
+    if args.emb2:
+        vectors = load_embeddings_d(args.emb1, args.emb2)
+    else:
+        vectors = load_embeddings(args.emb1)
     if args.method == 'l':
         test_neg_file = os.path.join(args.dataset_dir, 'test.neg.txt.npy')
         test_neg_arr = np.load(open(test_neg_file, 'rb'))
@@ -84,9 +111,9 @@ def main(args):
         # ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         # for ratio in ratios:
         print("Training classifier using {:.2f}% nodes...".format(
-            args.clf_ratio*100))
+            0.5*100))
         clf = Classifier(vectors=vectors, clf=LogisticRegression())
-        results = clf.split_train_evaluate(X, Y, args.clf_ratio)
+        results = clf.split_train_evaluate(X, Y, 0.5)
 
 if __name__ == "__main__":
     random.seed(32)

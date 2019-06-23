@@ -9,7 +9,7 @@ from .classify import Classifier, read_node_label
 
 class _LINE(object):
 
-    def __init__(self, graph, rep_size=128, batch_size=1000, negative_ratio=5, order=3):
+    def __init__(self, graph, rep_size=128, batch_size=1000, negative_ratio=5, order=2):
         self.cur_epoch = 0
         self.order = order
         self.g = graph
@@ -36,9 +36,7 @@ class _LINE(object):
                                           self.node_size, self.rep_size], initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=cur_seed))
         self.context_embeddings = tf.get_variable(name="context_embeddings"+str(self.order), shape=[
                                                   self.node_size, self.rep_size], initializer=tf.contrib.layers.xavier_initializer(uniform=False, seed=cur_seed))
-        # self.h_e = tf.nn.l2_normalize(tf.nn.embedding_lookup(self.embeddings, self.h), 1)
-        # self.t_e = tf.nn.l2_normalize(tf.nn.embedding_lookup(self.embeddings, self.t), 1)
-        # self.t_e_context = tf.nn.l2_normalize(tf.nn.embedding_lookup(self.context_embeddings, self.t), 1)
+
         self.h_e = tf.nn.embedding_lookup(self.embeddings, self.h)
         self.t_e = tf.nn.embedding_lookup(self.embeddings, self.t)
         self.t_e_context = tf.nn.embedding_lookup(self.context_embeddings, self.t)
@@ -68,6 +66,30 @@ class _LINE(object):
         print('epoch:{} sum of loss:{!s}'.format(self.cur_epoch, sum_loss))
         self.cur_epoch += 1
 
+
+    def ppr_walk(self, start_node, walk_length):
+        '''
+        Simulate a ppr walk starting from start node.
+        '''
+        G = self.g.G
+        look_up = self.g.look_up_dict
+        node_size = self.node_size
+
+        walk = [start_node]
+        alpha = 0.7
+        while len(walk) < walk_length:
+            if np.random.rand() < alpha:
+                cur = walk[0]
+            else:
+                cur = walk[-1]
+            cur_nbrs = list(G.neighbors(cur))
+            if len(cur_nbrs) > 0:
+                walk.append(random.choice(cur_nbrs))
+            else:
+                break
+        return walk
+
+
     def batch_iter(self):
         look_up = self.g.look_up_dict
 
@@ -79,6 +101,7 @@ class _LINE(object):
         data_size = self.g.G.number_of_edges()
         shuffle_indices = np.random.permutation(np.arange(data_size))
 
+        # window size = 10,  number of walks = 10
         # positive or negative mod
         mod = 0
         mod_size = 1 + self.negative_ratio
@@ -88,31 +111,32 @@ class _LINE(object):
 
         start_index = 0
         end_index = min(start_index+self.batch_size, data_size)
-        while start_index < data_size:
-            if mod == 0:
-                sign = 1.
-                h = []
-                t = []
-                for i in range(start_index, end_index):
-                    if not random.random() < self.edge_prob[shuffle_indices[i]]:
-                        shuffle_indices[i] = self.edge_alias[shuffle_indices[i]]
-                    cur_h = edges[shuffle_indices[i]][0]
-                    cur_t = edges[shuffle_indices[i]][1]
+        walk_length = 80
+        walks = {}
+
+        nodes = list(self.g.G.nodes())
+        for node in nodes:
+            walks[node] = self.ppr_walk(node, walk_length)
+
+        for i in range(1, walk_length):
+            for mod in range(mod_size):
+                if mod == 0:
+                    sign = 1.
+                    h = []
+                    t = []
+                    cur_h = node
+                    cur_t = walks[i]
                     h.append(cur_h)
                     t.append(cur_t)
-            else:
-                sign = -1.
-                t = []
-                for i in range(len(h)):
-                    t.append(
-                        self.sampling_table[random.randint(0, table_size-1)])
+                else:
+                    sign = -1.
+                    t = []
+                    for i in range(len(h)):
+                        t.append(
+                            self.sampling_table[random.randint(0, table_size-1)])
 
-            yield h, t, [sign]
-            mod += 1
-            mod %= mod_size
-            if mod == 0:
-                start_index = end_index
-                end_index = min(start_index+self.batch_size, data_size)
+                yield h, t, [sign]
+
 
     def gen_sampling_table(self):
         table_size = 1e8
@@ -138,7 +162,7 @@ class _LINE(object):
             while i < table_size and float(i) / table_size < p:
                 self.sampling_table[i] = j
                 i += 1
-
+        '''
         data_size = self.g.G.number_of_edges()
         self.edge_alias = np.zeros(data_size, dtype=np.int32)
         self.edge_prob = np.zeros(data_size, dtype=np.float32)
@@ -184,6 +208,7 @@ class _LINE(object):
         while num_small_block:
             num_small_block -= 1
             self.edge_prob[small_block[num_small_block]] = 1
+        '''
 
     def get_embeddings(self):
         vectors = {}
@@ -203,7 +228,7 @@ class Z(object):
         self.vectors = {}
 
         self.model = _LINE(graph, rep_size, batch_size,
-                           negative_ratio, order=self.order)
+                           negative_ratio)
         for i in range(epoch):
             self.model.train_one_epoch()
             if label_file:
@@ -227,13 +252,7 @@ class Z(object):
     def get_embeddings(self):
         self.last_vectors = self.vectors
         self.vectors = {}
-        if self.order == 3:
-            vectors1 = self.model1.get_embeddings()
-            vectors2 = self.model2.get_embeddings()
-            for node in vectors1.keys():
-                self.vectors[node] = np.append(vectors1[node], vectors2[node])
-        else:
-            self.vectors = self.model.get_embeddings()
+        self.vectors = self.model.get_embeddings()
 
     def save_embeddings(self, filename):
         fout = open(filename, 'w')

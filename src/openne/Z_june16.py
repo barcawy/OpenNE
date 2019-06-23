@@ -4,8 +4,8 @@ import math
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 import tensorflow as tf
-import networkx as nx
 from .classify import Classifier, read_node_label
+import networkx as nx
 
 
 class _LINE(object):
@@ -19,7 +19,7 @@ class _LINE(object):
         self.batch_size = batch_size
         self.negative_ratio = negative_ratio
         if ppr:
-            self.g.G = self.ppr_walk()
+            self.ppr_walk()
         self.gen_sampling_table() # negqtive sampling
         self.sess = tf.Session()
         cur_seed = random.getrandbits(32)
@@ -35,10 +35,9 @@ class _LINE(object):
         Simulate a ppr walk starting from start node.
         '''
         G = self.g.G
-        new_G = nx.DiGraph()
         nodes = list(G.nodes())
         for node in nodes:
-            alpha = 0.2
+            alpha = 0.95
             cur = node
             for i in range(walk_length):
                 if np.random.rand() < alpha:
@@ -46,16 +45,15 @@ class _LINE(object):
                 cur_nbrs = list(G.neighbors(cur))
                 if len(cur_nbrs) > 0:
                     cur = random.choice(cur_nbrs)
-                    if new_G.has_edge(node, cur):
-                        new_G[node][cur]['weight'] += 1.0
+                    if G.has_edge(node, cur):
+                        G[node][cur]['weight'] += 0.0
                     else:
-                        new_G.add_edge(node, cur)
+                        G.add_edge(node, cur)
                         #G.add_edge(cur, node)
-                        new_G[node][cur]['weight'] = 1.0
+                        G[node][cur]['weight'] = 0.0
                         #G[cur][node]['weight'] = 1.0
                 else:
                     break
-        return new_G
 
 
     def build_graph(self):
@@ -76,6 +74,7 @@ class _LINE(object):
         self.t_e_context = tf.nn.embedding_lookup(self.context_embeddings, self.t)
         self.second_loss = -tf.reduce_mean(tf.log_sigmoid(self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e_context), axis=1)))
         self.first_loss = -tf.reduce_mean(tf.log_sigmoid(self.sign*tf.reduce_sum(tf.multiply(self.h_e, self.t_e), axis=1)))
+
         if self.order == 1:
             self.loss = self.first_loss
         else:
@@ -239,7 +238,7 @@ class Z(object):
             self.model1 = _LINE(graph, rep_size/2, batch_size,
                                 negative_ratio, order=1)
             self.model2 = _LINE(graph, rep_size/2, batch_size,
-                                negative_ratio, order=2, ppr=False)
+                                negative_ratio, order=2, ppr = False)
             for i in range(epoch):
                 self.model1.train_one_epoch()
                 self.model2.train_one_epoch()
@@ -259,7 +258,7 @@ class Z(object):
 
         else:
             self.model = _LINE(graph, rep_size, batch_size,
-                               negative_ratio, order=self.order, ppr=True)
+                               negative_ratio, order=self.order)
             for i in range(epoch):
                 self.model.train_one_epoch()
                 if label_file:

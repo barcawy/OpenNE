@@ -15,7 +15,8 @@ from . import lap
 from . import gf
 from . import sdne
 from .grarep import GraRep
-from . import Z_mayten
+from . import Z_june16
+from . import Z_0623
 import time
 import ast
 
@@ -146,9 +147,9 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
-        model = Z_mayten.Mayten(graph=g, path_length=args.walk_length,
-                                num_paths=args.number_walks, dim=args.representation_size,
-                                workers=args.workers, window=args.window_size)
+        model = Z_0623.Z(graph=g, path_length=args.walk_length,
+                         num_paths=args.number_walks, dim=args.representation_size,
+                         workers=args.workers, window=args.window_size)
     elif args.method == 'tadw':
         # assert args.label_file != ''
         assert args.feature_file != ''

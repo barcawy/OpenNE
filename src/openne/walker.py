@@ -31,6 +31,15 @@ class BasicWalker:
                 walk.append(random.choice(cur_nbrs))
             else:
                 break
+            '''
+            if np.random.rand() < 0.9:
+                if len(cur_nbrs) > 0:
+                    walk.append(random.choice(cur_nbrs))
+                else:
+                    break
+            else:
+                walk.append(start_node)
+            '''
         return walk
 
     def simulate_walks(self, num_walks, walk_length):
