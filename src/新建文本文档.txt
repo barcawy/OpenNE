@@ -1,0 +1,35 @@
+--facebook
+Method: deepWalk, ROC: 0.979038, Prec: 0.969347, time: 74 C=10
+Method: deepWalk, ROC: 0.976780, Prec: 0.967226, time: 44 C=5
+Method: deepWalk, ROC: 0.971799, Prec: 0.962310, time: 26 C=2
+
+Method: mayten, ROC: 0.985007, Prec: 0.977166, time: 30 C=10
+Method: mayten, ROC: 0.985987, Prec: 0.979242, time: 20 C=5
+Method: mayten, ROC: 0.987120, Prec: 0.981436, time: 15 C=2
+
+Method: node2vec, ROC: 0.984789, Prec: 0.976932, time: 61 C=5
+Method: node2vec, ROC: 0.985997, Prec: 0.980158, time: 55 C=2
+
+--ppi
+Method: deepWalk, ROC: 0.657347, Prec: 0.623371, time: 43 C=5
+Method: deepWalk, ROC: 0.673314, Prec: 0.638971, time: 25 C=2
+Method: deepWalk, ROC: 0.637541, Prec: 0.641589, time: 19 C=1
+
+Method: mayten, ROC: 0.695034, Prec: 0.687244, time: 22 C=5
+Method: mayten, ROC: 0.694405, Prec: 0.700280, time: 14 C=2
+Method: mayten, ROC: 0.749148, Prec: 0.764262, time: 12 C=1
+
+Method: node2vec, ROC: 0.727725, Prec: 0.728095, time: 34 C=2
+Method: node2vec, ROC: 0.818616, Prec: 0.831595, time: 30 C=1
+
+--ca-AStroph
+Method: mayten, ROC: 0.971601, Prec: 0.974877, time: 75 C=2
+Method: mayten, ROC: 0.977601, Prec: 0.981283, time: 67 C=1
+
+Method: node2vec, ROC: 0.963780, Prec: 0.967661, time: 175 C=2
+Method: node2vec, ROC: 0.976334, Prec: 0.981236, time: 169 C=1
+
+
+
+
+
