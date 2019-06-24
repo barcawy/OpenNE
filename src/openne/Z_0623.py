@@ -3,57 +3,10 @@ import time
 import math
 import random
 import numpy as np
+import pickle as pkl
 from gensim.models import Word2Vec
 from fastdtw import fastdtw
 from collections import Counter
-
-class Walker:
-    def __init__(self, G, workers):
-        self.G = G.G
-        self.node_size = G.node_size
-        self.look_up_dict = G.look_up_dict
-
-    def deepwalk_walk(self, walk_length, start_node, alpha = 0.5):
-        '''
-        Simulate a random walk starting from start node.
-        '''
-        G = self.G
-        look_up_dict = self.look_up_dict
-        node_size = self.node_size
-
-        walk = [start_node]
-
-        while len(walk) < walk_length:
-            cur = walk[-1]
-            # if np.random.rand() < alpha:
-
-            cur_nbrs = list(G.neighbors(cur))
-            if len(cur_nbrs) > 0:
-                walk.append(random.choice(cur_nbrs))
-            else:
-                break
-        return walk
-
-    def simulate_walks(self, num_walks, walk_length):
-        '''
-        Repeatedly simulate random walks from each node.
-        '''
-        G = self.G
-        walks = []
-        nodes = list(G.nodes())
-        print('Walk iteration:')
-        for walk_iter in range(num_walks):
-            # pool = multiprocessing.Pool(processes = 4)
-            print(str(walk_iter + 1), '/', str(num_walks))
-            random.shuffle(nodes)
-            for node in nodes:
-                # walks.append(pool.apply_async(deepwalk_walk_wrapper, (self, walk_length, node, )))
-                walks.append(self.deepwalk_walk(
-                    walk_length=walk_length, start_node=node))
-            # pool.close()
-            # pool.join()
-        # print(len(walks))
-        return walks
 
 
 class PPR_Walker:
@@ -111,18 +64,25 @@ class PPR_Walker:
 
 class Z(object):
 
-    def __init__(self, graph, path_length, num_paths, dim, **kwargs):
+    def __init__(self, graph, path_length, num_paths, dim, prefix, **kwargs):
 
         kwargs["workers"] = kwargs.get("workers", 1)
 
         kwargs["hs"] = 1 # 1 分层softmax 0 负采样
 
         self.graph = graph
-        ppr_walker = PPR_Walker(graph)
-        self.ppr_matrix = ppr_walker.simulate_walks(
-            num_walks=num_paths, walk_length=path_length)
-        self.degrees, self.degree_permuted = self.create_degree()
-        self.degree_neighbors, self.norm_weight = self.create_ppr_sample_table()
+        preprocess = False
+        if preprocess:
+            ppr_walker = PPR_Walker(graph)
+            self.ppr_matrix = ppr_walker.simulate_walks(
+                num_walks=num_paths, walk_length=path_length)
+            self.degrees, self.degree_permuted = self.create_degree()
+            self.degree_neighbors, self.norm_weight = self.create_ppr_sample_table()
+            self.dump_to_disk(self.degree_neighbors,'E:/Project/OpenNE/matrix_pkl/' + prefix + '_neighbors')
+            self.dump_to_disk(self.norm_weight,'E:/Project/OpenNE/matrix_pkl/' + prefix + '_weight')
+        else:
+            self.degree_neighbors = self.load_pkl('E:/Project/OpenNE/matrix_pkl/' + prefix + '_neighbors')
+            self.norm_weight = self.load_pkl('E:/Project/OpenNE/matrix_pkl/' + prefix + '_weight')
         sentences = self.simulate_walks(
             num_walks=num_paths, walk_length=path_length)
         kwargs["sentences"] = sentences
@@ -138,7 +98,16 @@ class Z(object):
             self.vectors[word] = word2vec.wv[word]
         del word2vec
 
-    def deepwalk_walk(self, walk_length, start_node, alpha = 0.5):
+    def dump_to_disk(self, f, file_name):
+        with open(file_name + '.pkl', 'wb') as handle:
+            pkl.dump(f, handle, protocol=pkl.HIGHEST_PROTOCOL)
+
+    def load_pkl(self, file_name):
+        with open(file_name + '.pkl', 'rb') as handle:
+            val = pkl.load(handle)
+        return val
+
+    def deepwalk_walk(self, walk_length, start_node, alpha = 0.9):
         '''
         Simulate a random walk starting from start node.
         '''
@@ -216,7 +185,7 @@ class Z(object):
             print(str(k + 1), '/', str(nodes_num))
             k += 1
             degree_neighbors[node] = self.get_vertices(node)
-            norm_weight[node] = self.ppr_sample(node, degree_neighbors)
+            norm_weight[node] = self.ppr_sample(node, degree_neighbors[node])
         print("- PPR sample table created.")
         return degree_neighbors, norm_weight
 

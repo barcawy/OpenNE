@@ -22,6 +22,7 @@ from . import gf
 from . import sdne
 from .grarep import GraRep
 from . import Z_mayten
+from . import Z_0623
 import time
 import ast
 
@@ -34,6 +35,8 @@ def parse_args():
                         help='Input graph file')
     parser.add_argument('--output',
                         help='Output representation file')
+    parser.add_argument('--prefix',
+                        help='dataset prefix')
     parser.add_argument('--number-walks', default=10, type=int,
                         help='Number of random walks to start at each node')
     parser.add_argument('--directed', action='store_true',
@@ -114,8 +117,8 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
-        model = Z_mayten.Mayten(graph=g, path_length=args.walk_length,
-                                num_paths=args.number_walks, dim=args.representation_size,
+        model = Z_0623.Z(graph=g, path_length=args.walk_length,
+                                num_paths=args.number_walks, dim=args.representation_size, prefix = args.prefix,
                                 workers=args.workers, window=args.window_size)
 
     t2 = time.time()
