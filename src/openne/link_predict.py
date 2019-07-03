@@ -120,6 +120,8 @@ def main(args):
         model = Z_0623.Z(graph=g, path_length=args.walk_length,
                                 num_paths=args.number_walks, dim=args.representation_size, prefix = args.prefix,
                                 workers=args.workers, window=args.window_size)
+    elif args.method == 'grarep':
+        model = GraRep(graph=g, Kstep=args.kstep, dim=args.representation_size)
 
     t2 = time.time()
     # print('time: %d \n' %(t2 - t1))

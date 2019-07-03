@@ -32,6 +32,8 @@ def parse_args():
                         help='Output representation file')
     parser.add_argument('--result',
                         help='results file')
+    parser.add_argument('--prefix',
+                        help='dataset prefix')
     parser.add_argument('--dataset',
                         help='dataset name')
     parser.add_argument('--number-walks', default=10, type=int,
@@ -148,7 +150,7 @@ def main(args):
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
         model = Z_0623.Z(graph=g, path_length=args.walk_length,
-                         num_paths=args.number_walks, dim=args.representation_size,
+                         num_paths=args.number_walks, dim=args.representation_size,prefix=args.prefix,
                          workers=args.workers, window=args.window_size)
     elif args.method == 'tadw':
         # assert args.label_file != ''
@@ -199,9 +201,9 @@ def main(args):
         results = clf.split_train_evaluate(X, Y, args.clf_ratio)
         # model.save_results(args.result, args.method, args.clf_ratio, results)
 
-
-
 if __name__ == "__main__":
     random.seed(32)
     np.random.seed(32)
     main(parse_args())
+
+

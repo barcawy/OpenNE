@@ -68,10 +68,10 @@ class Z(object):
 
         kwargs["workers"] = kwargs.get("workers", 1)
 
-        kwargs["hs"] = 1 # 1 分层softmax 0 负采样
+        #kwargs["hs"] = 1 # 1 分层softmax 0 负采样
 
         self.graph = graph
-        preprocess = False
+        preprocess = True
         if preprocess:
             ppr_walker = PPR_Walker(graph)
             self.ppr_matrix = ppr_walker.simulate_walks(
@@ -107,7 +107,7 @@ class Z(object):
             val = pkl.load(handle)
         return val
 
-    def deepwalk_walk(self, walk_length, start_node, alpha = 0.9):
+    def deepwalk_walk(self, walk_length, start_node, alpha = 0):
         '''
         Simulate a random walk starting from start node.
         '''
@@ -117,12 +117,20 @@ class Z(object):
 
         while len(walk) < walk_length:
             cur = walk[-1]
+            alpha = 3/G.degree(cur)
             if np.random.rand() < alpha:
                 walk.append(np.random.choice(self.degree_neighbors[cur], p=self.norm_weight[cur]))
             else:
                 cur_nbrs = list(G.neighbors(cur))
                 if len(cur_nbrs) > 0:
-                    walk.append(random.choice(cur_nbrs))
+                    # node2vec
+                    nbr = random.choice(cur_nbrs)
+                    if set(cur_nbrs) & set(G.neighbors(nbr)):
+                        walk.append(random.choice(cur_nbrs))
+                    else:
+                        walk.append(nbr)
+                    # deepwalk
+                    # walk.append(random.choice(cur_nbrs))
                 else:
                     break
         return walk
@@ -196,11 +204,15 @@ class Z(object):
         return ((m / mi) - 1)
 
     def ppr_sample(self, node, neighbors):
-        node_ppr_v = [i[1] for i in self.ppr_matrix[node].most_common()]
+        node_ppr_v = [i[1] for i in self.ppr_matrix[node].most_common()][1:]
+        if len(node_ppr_v) == 0:
+            node_ppr_v = [1]
         sim_list = []
         nodes_num = len(self.graph.G.nodes())
         for _neighbor in neighbors:
-            neighbor_ppr_v = [i[1] for i in self.ppr_matrix[_neighbor].most_common()]
+            neighbor_ppr_v = [i[1] for i in self.ppr_matrix[_neighbor].most_common()][1:]
+            if len(neighbor_ppr_v) == 0:
+                neighbor_ppr_v = [1]
             dits_dtw, _ = fastdtw(node_ppr_v, neighbor_ppr_v, radius=1, dist=self.cost)
             sim_list.append(np.exp(-1.0 * dits_dtw))
 
