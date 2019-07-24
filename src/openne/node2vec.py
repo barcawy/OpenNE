@@ -8,7 +8,7 @@ class Node2vec(object):
 
     def __init__(self, graph, path_length, num_paths, dim, p=1.0, q=1.0, dw=False, **kwargs):
 
-        kwargs["workers"] = kwargs.get("workers", 1)
+        kwargs["workers"] = kwargs.get("workers", 4)
 
         if dw:
             kwargs["hs"] = 1 # 1 分层softmax 0 负采样

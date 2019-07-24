@@ -4,99 +4,26 @@ import math
 import random
 import numpy as np
 import pickle as pkl
+import networkx as nx
 from gensim.models import Word2Vec
 from fastdtw import fastdtw
 from collections import Counter
-
-
-class PPR_Walker:
-    def __init__(self, G):
-        self.G = G.G
-        self.node_size = G.node_size
-        self.look_up_dict = G.look_up_dict
-
-    def ppr_walk(self, walk_length, start_node, alpha = 0.5):
-        '''
-        Simulate a random walk starting from start node.
-        '''
-        G = self.G
-        look_up_dict = self.look_up_dict
-        node_size = self.node_size
-
-        walk = [start_node]
-
-        while len(walk) < walk_length:
-            cur = walk[-1]
-            cur_nbrs = list(G.neighbors(cur))
-            if np.random.rand() < alpha:
-                if len(cur_nbrs) > 0:
-                    walk.append(random.choice(cur_nbrs))
-                else:
-                    break
-            else:
-                walk.append(start_node)
-        return walk
-
-    def simulate_walks(self, num_walks, walk_length):
-        '''
-        Repeatedly simulate random walks from each node.
-        '''
-        G = self.G
-        ppr_matrix = {}
-        nodes = list(G.nodes())
-        for node in nodes:
-            ppr_matrix[node] = Counter()
-        print('Structural walk iteration:')
-        for walk_iter in range(num_walks):
-            # pool = multiprocessing.Pool(processes = 4)
-            print(str(walk_iter + 1), '/', str(num_walks))
-            random.shuffle(nodes)
-            for node in nodes:
-                # walks.append(pool.apply_async(deepwalk_walk_wrapper, (self, walk_length, node, )))
-                walk = self.ppr_walk(walk_length=walk_length, start_node=node)
-                ppr_matrix[node].update(walk)
-                # 在有限次的采样中 能够采样到的节点是有限的 所以 也许不需要top-k处理 我们可以看看采样节点的个数来统计论证一下
-            # pool.close()
-            # pool.join()
-        # print(len(walks))
-        return ppr_matrix
-
+from collections import defaultdict
+import os
+import itertools as it
 
 class Z(object):
 
-    def __init__(self, graph, path_length, num_paths, dim, prefix, **kwargs):
-
+    def __init__(self, graph, hop=1,  **kwargs):
+        # , path_length, num_paths, dim, prefix
         kwargs["workers"] = kwargs.get("workers", 4)
 
         #kwargs["hs"] = 1 # 1 分层softmax 0 负采样
 
         self.graph = graph
-        preprocess = False
-        if preprocess:
-            ppr_walker = PPR_Walker(graph)
-            self.ppr_matrix = ppr_walker.simulate_walks(
-                num_walks=num_paths, walk_length=path_length)
-            self.degrees, self.degree_permuted = self.create_degree()
-            self.degree_neighbors, self.norm_weight = self.create_ppr_sample_table()
-            self.dump_to_disk(self.degree_neighbors,'E:/Project/OpenNE/matrix_pkl/' + prefix + '_neighbors')
-            self.dump_to_disk(self.norm_weight,'E:/Project/OpenNE/matrix_pkl/' + prefix + '_weight')
-        else:
-            self.degree_neighbors = self.load_pkl('E:/Project/OpenNE/matrix_pkl/' + prefix + '_neighbors')
-            self.norm_weight = self.load_pkl('E:/Project/OpenNE/matrix_pkl/' + prefix + '_weight')
-        sentences = self.simulate_walks(
-            num_walks=num_paths, walk_length=path_length)
-        kwargs["sentences"] = sentences
-        kwargs["min_count"] = kwargs.get("min_count", 0)
-        kwargs["size"] = kwargs.get("size", dim)
-        kwargs["sg"] = 1 # 1 skipgram; 0 CBOW
+        self.subgraph_walk_index = self.constructSubGraph(hop)
+        #nodesets = self.node_sets()
 
-        self.size = kwargs["size"]
-        print("Learning representation...")
-        word2vec = Word2Vec(**kwargs)
-        self.vectors = {}
-        for word in graph.G.nodes():
-            self.vectors[word] = word2vec.wv[word]
-        del word2vec
 
     def dump_to_disk(self, f, file_name):
         with open(file_name + '.pkl', 'wb') as handle:
@@ -107,7 +34,96 @@ class Z(object):
             val = pkl.load(handle)
         return val
 
-    def deepwalk_walk(self, walk_length, start_node, alpha = 15):
+    def neighbors(self, fringe):
+        # find all 1-hop neighbors of nodes in fringe from A
+        graph = self.graph.G
+        res = set()
+        for node in fringe:
+            nei = graph.neighbors(node)
+            nei = set(nei)
+            res = res.union(nei)
+        return res
+
+    def constructSubGraph(self, hop):
+        graph = self.graph.G
+        edge_set = set(graph.edges())
+        nodes = list(graph.nodes())
+        #subgraph_map = defaultdict(nx.Graph)
+        sub_graph_index = {}
+        for node in nodes:
+            subgraph_map = nx.Graph()
+            subgraph_map.add_node(node)
+            fringe = set({node})
+            visited = set({node})
+            for dist in range(0, hop):
+                fringe = self.neighbors(fringe)
+                fringe = fringe - visited
+                visited = visited.union(fringe)
+            visited = list(visited)
+            for pos_u, u in enumerate(visited):
+                for v in visited[pos_u+1:]:
+                    if (u, v) in edge_set or (v, u) in edge_set:
+                        subgraph_map.add_edge(u, v)
+            if node =='4125':
+                print(len(visited))
+                print(graph.degree(node))
+                print(subgraph_map.size())
+                nx.write_gexf(subgraph_map,'node-4125-sub.gexf')
+                return
+            sub_graph_index[node] = Counter()
+            walk = self.subgraph_walk(subgraph_map, walk_length=1000, start_node=node)
+            sub_graph_index[node].update(walk)
+        return sub_graph_index
+
+    def node_sets(self):
+        graph = self.graph.G
+        nodes = list(graph.nodes())
+        subgraph_index = self.subgraph_walk_index
+        nodesets = []
+        for node in nodes:
+            node_index = [i[0] for i in subgraph_index[node].most_common()][1:]
+            degree_index = [i[1] for i in subgraph_index[node].most_common()][1:]
+            error_range = 0.01 * degree_index[0]
+            cur_degree = degree_index[0]
+            node_set = set()
+            for idx, degree in enumerate(degree_index):
+                if degree - cur_degree < error_range:
+                    # 不包含中心节点
+                    node_set.add(node_index[idx])
+                    cur_degree = degree
+                else:
+                    nodesets.append(node_set)
+                    node_set = set()
+                    node_set.add(node_index[idx])
+                    cur_degree = degree
+        return nodesets
+
+    def edge_sample(self, nodesets):
+        edges = []
+        for nodes in nodesets:
+            node_combination = list(it.combinations(nodes, 2))
+            edges += node_combination
+
+
+
+
+    def subgraph_walk(self, subGraph, walk_length, start_node):
+        '''
+        Simulate a random walk starting from start node.
+        '''
+        G = subGraph
+        walk = [start_node]
+        while len(walk) < walk_length:
+            cur = walk[-1]
+            cur_nbrs = list(G.neighbors(cur))
+            if len(cur_nbrs) > 0:
+                walk.append(random.choice(cur_nbrs))
+            else:
+                # 独立的点
+                break
+        return walk
+
+    def deepwalk_walk(self, walk_length, start_node, alpha = 0.5):
         '''
         Simulate a random walk starting from start node.
         '''
@@ -205,13 +221,13 @@ class Z(object):
         return ((m / mi) - 1)
 
     def ppr_sample(self, node, neighbors):
-        node_ppr_v = [i[1] for i in self.ppr_matrix[node].most_common()][1:]
+        node_ppr_v = [i[1] for i in self.ppr_matrix[node].most_common()]#[1:]
         if len(node_ppr_v) == 0:
             node_ppr_v = [1]
         sim_list = []
         nodes_num = len(self.graph.G.nodes())
         for _neighbor in neighbors:
-            neighbor_ppr_v = [i[1] for i in self.ppr_matrix[_neighbor].most_common()][1:]
+            neighbor_ppr_v = [i[1] for i in self.ppr_matrix[_neighbor].most_common()]#[1:]
             if len(neighbor_ppr_v) == 0:
                 neighbor_ppr_v = [1]
             dits_dtw, _ = fastdtw(node_ppr_v, neighbor_ppr_v, radius=1, dist=self.cost)

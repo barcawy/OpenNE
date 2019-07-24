@@ -17,6 +17,8 @@ from . import sdne
 from .grarep import GraRep
 from . import Z_june16
 from . import Z_0623
+from . import Z_0709
+from . import Z_0716
 import time
 import ast
 
@@ -42,12 +44,14 @@ def parse_args():
                         help='Treat graph as directed.')
     parser.add_argument('--walk-length', default=80, type=int,
                         help='Length of the random walk started at each node')
-    parser.add_argument('--workers', default=8, type=int,
+    parser.add_argument('--workers', default=4, type=int,
                         help='Number of parallel processes.')
     parser.add_argument('--representation-size', default=128, type=int,
                         help='Number of latent dimensions to learn for each node.')
     parser.add_argument('--window-size', default=10, type=int,
                         help='Window size of skipgram model.')
+    parser.add_argument('--hop', default = 5, type=int,
+                        help='The most hop in subGraph')
     parser.add_argument('--epochs', default=5, type=int,
                         help='The training epochs of LINE and GCN')
     parser.add_argument('--p', default=1.0, type=float)
@@ -65,7 +69,8 @@ def parse_args():
         'gf',
         'sdne',
         'cll',
-        'mayten'
+        'mayten',
+        'Ztest'
     ], help='The learning method')
     parser.add_argument('--label-file', default='',
                         help='The file of node label')
@@ -149,9 +154,12 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
-        model = Z_0623.Z(graph=g, path_length=args.walk_length,
+        model = Z_0709.Z(graph=g, path_length=args.walk_length,
                          num_paths=args.number_walks, dim=args.representation_size,prefix=args.prefix,
-                         workers=args.workers, window=args.window_size)
+                         hop = args.hop, workers=args.workers, window=args.window_size)
+    elif args.method == 'Ztest':
+        model = Z_0716.Z(graph=g)
+        return
     elif args.method == 'tadw':
         # assert args.label_file != ''
         assert args.feature_file != ''

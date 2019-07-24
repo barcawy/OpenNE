@@ -23,6 +23,7 @@ from . import sdne
 from .grarep import GraRep
 from . import Z_mayten
 from . import Z_0623
+from . import Z_0709
 import time
 import ast
 
@@ -51,6 +52,8 @@ def parse_args():
                         help='Window size of skipgram model.')
     parser.add_argument('--epochs', default=5, type=int,
                         help='The training epochs of LINE and GCN')
+    parser.add_argument('--hop', default = 1, type=int,
+                        help='The most hop in subGraph')
     parser.add_argument('--p', default=1.0, type=float)
     parser.add_argument('--q', default=1.0, type=float)
     parser.add_argument('--method', required=True, choices=[
@@ -117,12 +120,14 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'mayten':
-        model = Z_0623.Z(graph=g, path_length=args.walk_length,
+        model = Z_0709.Z(graph=g, path_length=args.walk_length,
                                 num_paths=args.number_walks, dim=args.representation_size, prefix = args.prefix,
-                                workers=args.workers, window=args.window_size)
+                                hop = args.hop, workers=args.workers, window=args.window_size)
     elif args.method == 'grarep':
         model = GraRep(graph=g, Kstep=args.kstep, dim=args.representation_size)
-
+    elif args.method == 'line':
+        model = line.LINE(g, epoch=args.epochs,
+                      rep_size=args.representation_size, order=3)
     t2 = time.time()
     # print('time: %d \n' %(t2 - t1))
 
