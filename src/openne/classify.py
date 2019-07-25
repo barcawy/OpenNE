@@ -4,6 +4,7 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import MultiLabelBinarizer
 from time import time
+import operator
 
 
 class TopKRanker(OneVsRestClassifier):
@@ -32,10 +33,38 @@ class Classifier(object):
         Y = self.binarizer.transform(Y)
         self.clf.fit(X_train, Y)
 
+    # Degree of statistical
+    def dos(self, X, Y, Y_):
+        Y0 = Y.todense().tolist()
+        Y_0 = Y_.tolist()
+        duide = []
+        cuode = []
+        i = 0
+        for x in X:
+            if operator.eq(Y0[i], Y_0[i]):
+                duide.append(x)
+            else:
+                cuode.append(x)
+            i += 1
+        file = open('duide.txt', 'w')
+        for x in duide:
+            file.write(x)
+            file.write('\n')
+        file.close()
+        file = open('cuode.txt', 'w')
+        for x in cuode:
+            file.write(x)
+            file.write('\n')
+        file.close()
+
     def evaluate(self, X, Y):
         top_k_list = [len(l) for l in Y]
         Y_ = self.predict(X, top_k_list)
         Y = self.binarizer.transform(Y)
+
+        # Degree of statistical
+        self.dos(X, Y, Y_)
+
         averages = ["micro", "macro", "samples", "weighted"]
         results = {}
         for average in averages:
