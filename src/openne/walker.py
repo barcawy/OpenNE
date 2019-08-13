@@ -29,6 +29,14 @@ class BasicWalker:
             cur_nbrs = list(G.neighbors(cur))
             if len(cur_nbrs) > 0:
                 walk.append(random.choice(cur_nbrs))
+                '''
+                nbr = random.choice(cur_nbrs)
+                p = np.random.rand()
+                if p <= G.degree(cur) / G.degree(nbr):
+                    walk.append(nbr)
+                else:
+                    continue
+                '''
             else:
                 break
             '''

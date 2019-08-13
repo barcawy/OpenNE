@@ -15,6 +15,7 @@ from . import lap
 from . import gf
 from . import sdne
 from .grarep import GraRep
+from . import app
 from . import Z_june16
 from . import Z_0623
 from . import Z_0709
@@ -70,7 +71,8 @@ def parse_args():
         'sdne',
         'cll',
         'mayten',
-        'Ztest'
+        'Ztest',
+        'app'
     ], help='The learning method')
     parser.add_argument('--label-file', default='',
                         help='The file of node label')
@@ -153,6 +155,8 @@ def main(args):
         model = node2vec.Node2vec(graph=g, path_length=args.walk_length,
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
+    elif args.method == 'app':
+        model = app.App(graph=g, rep_size=args.representation_size)
     elif args.method == 'mayten':
         model = Z_0709.Z(graph=g, path_length=args.walk_length,
                          num_paths=args.number_walks, dim=args.representation_size,prefix=args.prefix,

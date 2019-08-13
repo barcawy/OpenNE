@@ -115,7 +115,7 @@ class Z(object):
         walk = [start_node]
         while len(walk) < walk_length:
             cur = walk[-1]
-            alpha = alpha/G.degree(cur)
+            alpha = 1#alpha/G.degree(cur)
             if np.random.rand() < alpha:
                 walk.append(np.random.choice(self.degree_neighbors[cur], p=self.norm_weight[cur]))
             else:

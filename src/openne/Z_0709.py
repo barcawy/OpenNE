@@ -20,7 +20,7 @@ class Z(object):
         #kwargs["hs"] = 1 # 1 分层softmax 0 负采样
 
         self.graph = graph
-        preprocess = True
+        preprocess = False
         if preprocess:
             self.ppr_matrix = self.constructSubGraph(hop)
             self.degrees, self.degree_permuted = self.create_degree()
@@ -114,7 +114,7 @@ class Z(object):
         walk = [start_node]
         while len(walk) < walk_length:
             cur = walk[-1]
-            alpha = alpha/G.degree(cur)
+            alpha = 1#alpha/G.degree(cur)
             if np.random.rand() < alpha:
                 walk.append(np.random.choice(self.degree_neighbors[cur], p=self.norm_weight[cur]))
             else:
