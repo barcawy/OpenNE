@@ -156,7 +156,7 @@ def main(args):
                                   num_paths=args.number_walks, dim=args.representation_size,
                                   workers=args.workers, window=args.window_size, dw=True)
     elif args.method == 'app':
-        model = app.App(graph=g, rep_size=args.representation_size)
+        model = app.App(graph=g, rep_size=args.representation_size, epoch=args.epochs)
     elif args.method == 'mayten':
         model = Z_0709.Z(graph=g, path_length=args.walk_length,
                          num_paths=args.number_walks, dim=args.representation_size,prefix=args.prefix,
@@ -199,9 +199,16 @@ def main(args):
     print(t2-t1)
     if args.method != 'gcn':
         print("Saving embeddings...")
-        model.save_embeddings(args.output)
+        # model.save_embeddings(args.output)
     if args.label_file and args.method != 'gcn':
-        vectors = model.vectors
+        if args.method == 'app':
+            vectors_s = model.vectors_s
+            vectors_t = model.vectors_t
+            vectors = {}
+            for key in vectors_s.keys():
+                vectors[key] = np.append(vectors_s[key], vectors_t[key])
+        else:
+            vectors = model.vectors
         X, Y = read_node_label(args.label_file)  # groupid list
         # X, Y = read_node_label_index(args.label_file)  # 单列groupid
 

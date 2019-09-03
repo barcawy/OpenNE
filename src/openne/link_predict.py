@@ -94,29 +94,30 @@ def get_edge_embeddings(emb_matrix, edge_list):
     embs = np.array(embs)
     return embs
 
-def get_dire_edge_embeddings(emb_matrix_s, emb_matrix_t, edge_list):
+def get_dire_edge_embeddings(g, emb_matrix_s, emb_matrix_t, edge_list, directed):
     # V 2.0
-    embs = []
-    for edge in edge_list:
-        emb_0s = emb_matrix_s[str(edge[0])]
-        emb_1s = emb_matrix_s[str(edge[1])]
-        emb_0t = emb_matrix_t[str(edge[0])]
-        emb_1t = emb_matrix_t[str(edge[1])]
-        edge_emb = np.multiply(emb_0s, emb_1t) + np.multiply(emb_1s, emb_0t)
-        embs.append(edge_emb)
-    embs = np.array(embs)
-    return embs
-    ''' 
-    # V 1.0
-    embs = []
-    for edge in edge_list:
-        emb1 = emb_matrix_s[str(edge[0])]
-        emb2 = emb_matrix_t[str(edge[1])]
-        edge_emb = np.multiply(emb1, emb2)
-        embs.append(edge_emb)
-    embs = np.array(embs)
-    return embs
-    '''
+    if not directed:
+        embs = []
+        for edge in edge_list:
+            emb_0s = emb_matrix_s[str(edge[0])]
+            emb_1s = emb_matrix_s[str(edge[1])]
+            emb_0t = emb_matrix_t[str(edge[0])]
+            emb_1t = emb_matrix_t[str(edge[1])]
+            edge_emb = np.dot(emb_0s, emb_1t) + np.dot(emb_1s, emb_0t)
+            embs.append(edge_emb.reshape(-1))
+        embs = np.array(embs)
+        return embs
+    else:# 0.8962
+        # V 1.0
+        embs = []
+        for edge in edge_list:
+            emb1 = emb_matrix_s[str(edge[0])]
+            emb2 = emb_matrix_t[str(edge[1])]
+            edge_emb = np.dot(emb1, emb2)
+            embs.append(edge_emb.reshape(-1))
+        embs = np.array(embs)
+        return embs
+
 
 def get_degree(g, edge_list):
     degrees = {1:[], 2:[], 5:[], 10:[], 30:[], 50:[], 100:[], 1e5:[]}
@@ -130,7 +131,6 @@ def get_degree(g, edge_list):
             i += 1
         degrees[dl[i]].append(index)
     return degrees
-
 
 def doS(g, vectors, edge_classifier,test_pos_arr, test_neg_arr, pos_test_edge_embs, neg_test_edge_embs):
     pos_degree_dict = get_degree(g, test_pos_arr)
@@ -201,8 +201,8 @@ def main(args):
     if args.method == 'app':
         vectors_s = model.vectors_s
         vectors_t = model.vectors_t
-        pos_train_edge_embs = get_dire_edge_embeddings(vectors_s, vectors_t, train_pos_arr)
-        neg_train_edge_embs = get_dire_edge_embeddings(vectors_s, vectors_t, train_neg_arr)
+        pos_train_edge_embs = get_dire_edge_embeddings(g, vectors_s, vectors_t, train_pos_arr, directed=args.directed)
+        neg_train_edge_embs = get_dire_edge_embeddings(g, vectors_s, vectors_t, train_neg_arr, directed=args.directed)
     else:
         vectors = model.vectors
         # Train-set edge embeddings
@@ -215,8 +215,8 @@ def main(args):
 
     # Test-set edge embeddings, labels
     if args.method == 'app':
-        pos_test_edge_embs = get_dire_edge_embeddings(vectors_s, vectors_t, test_pos_arr)
-        neg_test_edge_embs = get_dire_edge_embeddings(vectors_s, vectors_t, test_neg_arr)
+        pos_test_edge_embs = get_dire_edge_embeddings(g, vectors_s, vectors_t, test_pos_arr, directed=args.directed)
+        neg_test_edge_embs = get_dire_edge_embeddings(g, vectors_s, vectors_t, test_neg_arr, directed=args.directed)
     else:
         pos_test_edge_embs = get_edge_embeddings(vectors, test_pos_arr)
         neg_test_edge_embs = get_edge_embeddings(vectors, test_neg_arr)
